@@ -1,15 +1,25 @@
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_zig//zig:defs.bzl", "zig_library")
+
+bool_flag(
+    name = "zig_direct",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "zig_direct_enabled",
+    constraint_values = ["@platforms//os:linux"],
+    flag_values = {":zig_direct": "true"},
+    visibility = ["//visibility:public"],
+)
 
 cc_library(
     name = "retain_runfiles_init",
     srcs = ["runfiles_init.c"],
-    # Retain the constructor even when its object is in a static archive.
-    # Mach-O adds an underscore to the exported C symbol.
-    linkopts = select({
-        "@platforms//os:macos": ["-Wl,-u,__bazel_runfiles_init"],
-        "//conditions:default": ["-Wl,-u,_bazel_runfiles_init"],
-    }),
+    # The single member registers the runfiles initializer before Zig's main.
+    alwayslink = True,
 )
 
 zig_library(
